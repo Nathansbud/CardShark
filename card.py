@@ -115,10 +115,11 @@ class Card:
         d = d[sum([len(l) for l in h]):] #Deck is whatever is remaining
         return d, h
 
-deck, hands = Card.deal(Card.make_deck(), players=10)
-print(ls(hands))
-
 class ScoreSystem:
+    class StandardScores:
+        HEARTS = "X-0,H-1,QS-13"
+        INTERNATIONAL = "#-5,F-10,A-15,2-25"
+
     """
     Codes:
         - 1, 2, 3, 4, 5, 6, 7, 8, 9, T, J, Q, K, A, $: Card Codes
@@ -126,7 +127,8 @@ class ScoreSystem:
         - H, S, C, D: Suit Codes (Heart, Spades, Clubs, Diamonds)
         - X, #, F: Set Codes (All, Numbers, Face Cards)
     """
-    def __init__(self, ruleset="HF-15,J-10"): #Ruleset is inverted, later rules are evaluated first (i.e. HF-15,J-10, Jack of Hearts would match for 10)
+    #Because of the way matching works, an "invalid" (non-match) code = "everything matches"...should prob change this but it means X-0 = non-match 0 points
+    def __init__(self, ruleset): #Ruleset is inverted, later rules are evaluated first (i.e. HF-15,J-10, Jack of Hearts would match for 10)
         self.ruleset = ScoreSystem.parse_ruleset(ruleset)
 
     # noinspection PyShadowingNames
@@ -149,6 +151,7 @@ class ScoreSystem:
         return compares
 
     def score(self, card_set):
+        score = 0
         for card in card_set:
             for rule in self.ruleset:
                 #this is a mess that needs cleaning
@@ -158,12 +161,16 @@ class ScoreSystem:
                          (rule['special']['type'] == 'suit' and card.suit in rule['special']['set']) or
                          (rule['special']['type'] == 'color' and card.color in rule['special']['set'])):
                         print(card, rule['score'], "(Special)")
+                        score += rule['score']
                         break
                     elif not rule['special']:
                         print(card, rule['score'], "(Normal)")
+                        score += rule['score']
                         break
             else:
                 print("No rules matched!")
+        return score
 
-s = ScoreSystem()
-s.score([Card(11), Card(12), Card(10)])
+deck, hands = Card.deal(Card.make_deck(), players=4)
+s = ScoreSystem(ScoreSystem.StandardScores.HEARTS)
+print(s.score(hands[0]))
