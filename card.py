@@ -40,28 +40,40 @@ class Color(Enum):
 
 class Card:
     suit_map = {
-        0:Suit.HEARTS,
-        1:Suit.CLUBS,
-        2:Suit.DIAMONDS,
-        3:Suit.SPADES,
+        0:Suit.HEARTS, "H": Suit.HEARTS,
+        1:Suit.CLUBS, "C": Suit.CLUBS,
+        2:Suit.DIAMONDS, "D": Suit.DIAMONDS,
+        3:Suit.SPADES, "S": Suit.SPADES,
         4:Suit.JOKER
     } #0-H, 1-C, 2-D, 3-S, 4-J
+
+    #A smarter programmer (read: future me when I'm less tired) would overhaul the idx to incr by one and just use the same values
     value_map = {
-        0:Value.ACE,
-        1:Value.TWO,
-        2:Value.THREE,
-        3:Value.FOUR,
-        4:Value.FIVE,
-        5:Value.SIX,
-        6:Value.SEVEN,
-        7:Value.EIGHT,
-        8:Value.NINE,
-        9:Value.TEN,
-        10:Value.JACK,
-        11:Value.QUEEN,
-        12:Value.KING,
-        99: Value.JOKER,
+        0:Value.ACE, "A":Value.ACE,
+        1:Value.TWO, "2":Value.TWO,
+        2:Value.THREE, "3":Value.THREE,
+        3:Value.FOUR, "4":Value.FOUR,
+        4:Value.FIVE, "5": Value.FIVE,
+        5:Value.SIX, "6": Value.SIX,
+        6:Value.SEVEN, "7": Value.SEVEN,
+        7:Value.EIGHT, "8": Value.EIGHT,
+        8:Value.NINE, "9": Value.NINE,
+        9:Value.TEN, "T": Value.TEN,
+        10:Value.JACK, "J": Value.JACK,
+        11:Value.QUEEN, "Q": Value.QUEEN,
+        12:Value.KING, "K": Value.KING,
+        99: Value.JOKER, "$": Value.JOKER,
     } #0-A, 1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10, 10-J, 11-Q, 12-K, 99-J
+
+    color_map = {
+        "R":Color.RED, "B":Color.BLACK
+    }
+
+    group_map = {
+        "#":{"type":"value", "set":{Value.TWO, Value.THREE, Value.FOUR, Value.FIVE, Value.SIX, Value.SEVEN, Value.EIGHT, Value.NINE,
+              Value.TEN}},
+        "F":{"type":"value", "set":{Value.JACK, Value.QUEEN, Value.KING}}
+    }
 
     def __init__(self, idx):
         self.idx = idx
@@ -114,29 +126,44 @@ class ScoreSystem:
         - H, S, C, D: Suit Codes (Heart, Spades, Clubs, Diamonds)
         - X, #, F: Set Codes (All, Numbers, Face Cards)
     """
-    def __init__(self, ruleset="X-0"):
-        self.rules = ScoreSystem.parse_ruleset(ruleset)
+    def __init__(self, ruleset="HF-15,J-10"): #Ruleset is inverted, later rules are evaluated first (i.e. HF-15,J-10, Jack of Hearts would match for 10)
+        self.ruleset = ScoreSystem.parse_ruleset(ruleset)
 
+    # noinspection PyShadowingNames
     @staticmethod
     def parse_ruleset(ruleset):
-        rules = ruleset.split(",").reverse()
-        #these rules should be parsed into a list of expressions in the form:
-        #lambda card: if card.suit/value/color == COMPARE_VALUE: return score,
-        # i.e.
-        # if c.value == Value.QUEEN and c.suit == Suit.SPADES:
-        #   return 13
-        #
-        return []
+        rules = [r.strip() for r in ruleset.split(",")[::-1]] #Flip ruleset, priority is inverted
+        compares = []
+        for rule in rules:
+            features, score = rule.split("-")
+            feature_set = [f for f in features]
+            suit, value, color, special = None, None, None, None
+            for feature in feature_set:
+                if feature in Card.value_map: value = Card.value_map[feature]
+                elif feature in Card.suit_map: suit = Card.suit_map[feature]
+                elif feature in Card.color_map: color = Card.color_map[feature]
+                elif feature in Card.group_map: special = Card.group_map[feature]
+
+            # compares.append([lambda card: float(score) if ((not value or card.value == value) and (not suit or card.suit == suit) and (not color or card.color == color)) else None])
+            compares.append({"score":float(score), "value":value, "suit":suit, "color":color, "special":special})
+        return compares
 
     def score(self, card_set):
-        score = 0
-        for c in card_set:
-            for rule in self.rules:
-                score += rule(c)
-
-
-
-        return score
+        for card in card_set:
+            for rule in self.ruleset:
+                #this is a mess that needs cleaning
+                if (not rule['value'] or card.value == rule['value']) and (not rule['suit'] or card.suit == rule['suit']) and (not rule['color'] or card.color == rule['color']):
+                    if rule['special'] and \
+                        ((rule['special']['type'] == 'value' and card.value in rule['special']['set']) or
+                         (rule['special']['type'] == 'suit' and card.suit in rule['special']['set']) or
+                         (rule['special']['type'] == 'color' and card.color in rule['special']['set'])):
+                        print(card, rule['score'], "(Special)")
+                        break
+                    elif not rule['special']:
+                        print(card, rule['score'], "(Normal)")
+                        break
+            else:
+                print("No rules matched!")
 
 s = ScoreSystem()
-print(s.score([Card(50)]))
+s.score([Card(11), Card(12), Card(10)])
