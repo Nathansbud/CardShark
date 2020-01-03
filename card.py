@@ -47,7 +47,6 @@ class Card:
         4:Suit.JOKER
     } #0-H, 1-C, 2-D, 3-S, 4-J
     value_map = {
-        -1: Value.JOKER,
         0:Value.ACE,
         1:Value.TWO,
         2:Value.THREE,
@@ -60,13 +59,14 @@ class Card:
         9:Value.TEN,
         10:Value.JACK,
         11:Value.QUEEN,
-        12:Value.KING
-    } #0-A, 1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10, 10-J, 11-Q, 12-K, -1-J
+        12:Value.KING,
+        99: Value.JOKER,
+    } #0-A, 1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10, 10-J, 11-Q, 12-K, 99-J
 
     def __init__(self, idx):
         self.idx = idx
         self.suit = Card.suit_map[idx // 13] #52, 53 = Joker
-        self.value = Card.value_map[idx % 13 if idx < 52 else -1]
+        self.value = Card.value_map[idx % 13 if idx < 52 else 99]
         self.color = Color.RED if self.suit is Suit.DIAMONDS or self.suit is Suit.HEARTS or idx == 52 else Color.BLACK
 
     def __repr__(self):
@@ -105,3 +105,38 @@ class Card:
 
 deck, hands = Card.deal(Card.make_deck(), players=10)
 print(ls(hands))
+
+class ScoreSystem:
+    """
+    Codes:
+        - 1, 2, 3, 4, 5, 6, 7, 8, 9, T, J, Q, K, A, $: Card Codes
+        - R, B: Color Codes (Red, Black)
+        - H, S, C, D: Suit Codes (Heart, Spades, Clubs, Diamonds)
+        - X, #, F: Set Codes (All, Numbers, Face Cards)
+    """
+    def __init__(self, ruleset="X-0"):
+        self.rules = ScoreSystem.parse_ruleset(ruleset)
+
+    @staticmethod
+    def parse_ruleset(ruleset):
+        rules = ruleset.split(",").reverse()
+        #these rules should be parsed into a list of expressions in the form:
+        #lambda card: if card.suit/value/color == COMPARE_VALUE: return score,
+        # i.e.
+        # if c.value == Value.QUEEN and c.suit == Suit.SPADES:
+        #   return 13
+        #
+        return []
+
+    def score(self, card_set):
+        score = 0
+        for c in card_set:
+            for rule in self.rules:
+                score += rule(c)
+
+
+
+        return score
+
+s = ScoreSystem()
+print(s.score([Card(50)]))
