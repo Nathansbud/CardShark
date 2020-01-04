@@ -12,102 +12,82 @@ from random import shuffle
 def ls(l): return [len(s) for s in l]
 
 class Suit(Enum):
-    HEARTS = auto()
-    CLUBS = auto()
-    DIAMONDS = auto()
-    SPADES = auto()
-    JOKER = auto()
+    HEARTS = (0, "Hearts", "H", "♥")
+    CLUBS = (1, "Clubs", "C", "♣")
+    DIAMONDS = (2, "Diamonds", "D", "♦")
+    SPADES = (3, "Spades", "S", "♠")
+    JOKER = (4, "Joker", "JO", "$")
+
+    def __init__(self, idx, full, code, symbol):
+        self.idx = idx
+        self.full = full
+        self.code = code
+        self.symbol = symbol
 
 class Value(Enum):
-    JOKER = auto()
-    ACE = auto()
-    KING = auto()
-    QUEEN = auto()
-    JACK = auto()
-    TEN = auto()
-    NINE = auto()
-    EIGHT = auto()
-    SEVEN = auto()
-    SIX = auto()
-    FIVE = auto()
-    FOUR = auto()
-    THREE = auto()
-    TWO = auto()
+    JOKER = (99, "Joker", "JO", "$")
+    ACE = (0, "Ace", "A", "A")
+    TWO = (1, "Two", "2", "2")
+    THREE = (2, "Three", "3", "3")
+    FOUR = (3, "Four", "4", "4")
+    FIVE = (4, "Five", "5", "5")
+    SIX = (5, "Six", "6", "6")
+    SEVEN = (6, "Seven", "7", "7")
+    EIGHT = (7, "Eight", "8", "8")
+    NINE = (8, "Nine", "9", "9")
+    TEN = (9, "Ten", "10", "T")
+    JACK = (10, "Jack", "J", "J")
+    QUEEN = (11, "Queen", "Q", "Q")
+    KING = (12, "King", "K", "K")
+
+    def __init__(self, idx, full, rep, code):
+        self.idx = idx
+        self.full = full
+        self.rep = rep
+        self.code = code
 
 class Color(Enum):
-    RED = auto()
-    BLACK = auto()
+    RED = ("Red", "R")
+    BLACK = ("Black", "B")
 
-value_repr = {
-    Value.ACE:"A",
-    Value.TWO:"2",Value.THREE:"3",Value.FOUR:"4",Value.FIVE:"5",Value.SIX:"6",Value.SEVEN:"7",Value.EIGHT:"8",Value.NINE:"9",Value.TEN:"10",
-    Value.JACK:"J",Value.QUEEN:"Q",Value.KING:"K",Value.JOKER:"JO",
-}
-suit_repr = {Suit.HEARTS:"♥", Suit.CLUBS:"♣", Suit.DIAMONDS:"♦", Suit.SPADES:"♠"}
-color_repr = {Color.RED:"R",Color.BLACK:"B"}
+    def __init__(self, full, rep):
+        self.full = full
+        self.rep = rep
 
 class Card:
-    minify = True
+    minify = False
 
-    suit_map = {
-        0:Suit.HEARTS, "H": Suit.HEARTS,
-        1:Suit.CLUBS, "C": Suit.CLUBS,
-        2:Suit.DIAMONDS, "D": Suit.DIAMONDS,
-        3:Suit.SPADES, "S": Suit.SPADES,
-        4:Suit.JOKER
-    } #0-H, 1-C, 2-D, 3-S, 4-J
+    suit_map = {s.idx:s for s in Suit}
+    for s in Suit: suit_map[s.code] = s
 
-    #A smarter programmer (read: future me when I'm less tired) would overhaul the idx to incr by one and just use the same values
-    value_map = {
-        0:Value.ACE,
-        1:Value.TWO,
-        2:Value.THREE,
-        3:Value.FOUR,
-        4:Value.FIVE,
-        5:Value.SIX,
-        6:Value.SEVEN,
-        7:Value.EIGHT,
-        8:Value.NINE,
-        9:Value.TEN,
-        10:Value.JACK,
-        11:Value.QUEEN,
-        12:Value.KING,
-        99: Value.JOKER,
-    } #0-A, 1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10, 10-J, 11-Q, 12-K, 99-J
+    value_map = {v.idx:v for v in Value}
+    for v in Value: value_map[v.code] = v
 
-    color_map = {"R":Color.RED, "B":Color.BLACK}
+    color_map = {c.rep:c for c in Color}
+
     group_map = {
         "#":{"type":"value", "set":{Value.TWO, Value.THREE, Value.FOUR, Value.FIVE, Value.SIX, Value.SEVEN, Value.EIGHT, Value.NINE,
               Value.TEN}},
         "F":{"type":"value", "set":{Value.JACK, Value.QUEEN, Value.KING}}
     }
-    for k, v in value_repr.items():
-        if v == Value.TEN: k = "T"
-        if v == Value.JOKER: k = "$"
-        value_map[v] = k
 
     def __init__(self, idx):
         self.idx = idx
-        self.suit = Card.suit_map[idx // 13] #52, 53 = Joker
         self.value = Card.value_map[idx % 13 if idx < 52 else 99]
+        self.suit = Card.suit_map[idx // 13] #52, 53 = Joker
         self.color = Color.RED if self.suit is Suit.DIAMONDS or self.suit is Suit.HEARTS or idx == 52 else Color.BLACK
 
     def __repr__(self):
         if Card.minify:
-            if self.value is not Value.JOKER: return f"{value_repr[self.value]}{suit_repr[self.suit]}"
-            else: return f"{value_repr[self.value]}{color_repr[self.color]}"
+            if self.value is not Value.JOKER: return f"{self.value.rep}{self.suit.symbol}"
+            else: return f"{self.value.rep}{self.color.rep}"
         else:
-            if self.value is not Value.JOKER:
-                value = str(self.value).split(".")[1].lower().capitalize()
-                suit = str(self.suit).split(".")[1].lower().capitalize()
-                return f"{value} of {suit}"
-            else:
-                color = str(self.color).split(".")[1].lower().capitalize()
-                return f"{color} Joker"
+            if self.value is not Value.JOKER: return f"{self.value.full} of {self.suit.full}"
+            else: return f"{self.color.full} {self.value.full}"
 
 
     @staticmethod
-    def make_deck(decks=1, with_jokers=False, shuffled=True):
+    def make_deck(decks=1, with_jokers=True, shuffled=True):
         cards = [Card(i) for i in range(54 if with_jokers else 52)]*decks
         if shuffled: shuffle(cards)
         return cards
