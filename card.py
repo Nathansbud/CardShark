@@ -38,7 +38,17 @@ class Color(Enum):
     RED = auto()
     BLACK = auto()
 
+value_repr = {
+    Value.ACE:"A",
+    Value.TWO:"2",Value.THREE:"3",Value.FOUR:"4",Value.FIVE:"5",Value.SIX:"6",Value.SEVEN:"7",Value.EIGHT:"8",Value.NINE:"9",Value.TEN:"10",
+    Value.JACK:"J",Value.QUEEN:"Q",Value.KING:"K",Value.JOKER:"JO",
+}
+suit_repr = {Suit.HEARTS:"♥", Suit.CLUBS:"♣", Suit.DIAMONDS:"♦", Suit.SPADES:"♠"}
+color_repr = {Color.RED:"R",Color.BLACK:"B"}
+
 class Card:
+    minify = True
+
     suit_map = {
         0:Suit.HEARTS, "H": Suit.HEARTS,
         1:Suit.CLUBS, "C": Suit.CLUBS,
@@ -49,31 +59,32 @@ class Card:
 
     #A smarter programmer (read: future me when I'm less tired) would overhaul the idx to incr by one and just use the same values
     value_map = {
-        0:Value.ACE, "A":Value.ACE,
-        1:Value.TWO, "2":Value.TWO,
-        2:Value.THREE, "3":Value.THREE,
-        3:Value.FOUR, "4":Value.FOUR,
-        4:Value.FIVE, "5": Value.FIVE,
-        5:Value.SIX, "6": Value.SIX,
-        6:Value.SEVEN, "7": Value.SEVEN,
-        7:Value.EIGHT, "8": Value.EIGHT,
-        8:Value.NINE, "9": Value.NINE,
-        9:Value.TEN, "T": Value.TEN,
-        10:Value.JACK, "J": Value.JACK,
-        11:Value.QUEEN, "Q": Value.QUEEN,
-        12:Value.KING, "K": Value.KING,
-        99: Value.JOKER, "$": Value.JOKER,
+        0:Value.ACE,
+        1:Value.TWO,
+        2:Value.THREE,
+        3:Value.FOUR,
+        4:Value.FIVE,
+        5:Value.SIX,
+        6:Value.SEVEN,
+        7:Value.EIGHT,
+        8:Value.NINE,
+        9:Value.TEN,
+        10:Value.JACK,
+        11:Value.QUEEN,
+        12:Value.KING,
+        99: Value.JOKER,
     } #0-A, 1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10, 10-J, 11-Q, 12-K, 99-J
 
-    color_map = {
-        "R":Color.RED, "B":Color.BLACK
-    }
-
+    color_map = {"R":Color.RED, "B":Color.BLACK}
     group_map = {
         "#":{"type":"value", "set":{Value.TWO, Value.THREE, Value.FOUR, Value.FIVE, Value.SIX, Value.SEVEN, Value.EIGHT, Value.NINE,
               Value.TEN}},
         "F":{"type":"value", "set":{Value.JACK, Value.QUEEN, Value.KING}}
     }
+    for k, v in value_repr.items():
+        if v == Value.TEN: k = "T"
+        if v == Value.JOKER: k = "$"
+        value_map[v] = k
 
     def __init__(self, idx):
         self.idx = idx
@@ -82,13 +93,18 @@ class Card:
         self.color = Color.RED if self.suit is Suit.DIAMONDS or self.suit is Suit.HEARTS or idx == 52 else Color.BLACK
 
     def __repr__(self):
-        if self.value is not Value.JOKER:
-            value = str(self.value).split(".")[1].lower().capitalize()
-            suit = str(self.suit).split(".")[1].lower().capitalize()
-            return f"{value} of {suit}"
+        if Card.minify:
+            if self.value is not Value.JOKER: return f"{value_repr[self.value]}{suit_repr[self.suit]}"
+            else: return f"{value_repr[self.value]}{color_repr[self.color]}"
         else:
-            color = str(self.color).split(".")[1].lower().capitalize()
-            return f"{color} Joker"
+            if self.value is not Value.JOKER:
+                value = str(self.value).split(".")[1].lower().capitalize()
+                suit = str(self.suit).split(".")[1].lower().capitalize()
+                return f"{value} of {suit}"
+            else:
+                color = str(self.color).split(".")[1].lower().capitalize()
+                return f"{color} Joker"
+
 
     @staticmethod
     def make_deck(decks=1, with_jokers=False, shuffled=True):
@@ -109,10 +125,11 @@ class Card:
 
         if amt < 0:
             # If a full deck deal, add the excess to each hand
-            for i in range(len(d) % amount):
+            for i in range(1, len(d) % amount+1):
                 h[i].append(d[-i])
 
         d = d[sum([len(l) for l in h]):] #Deck is whatever is remaining
+
         return d, h
 
 class ScoreSystem:
