@@ -1,15 +1,14 @@
 from enum import Enum, auto
 from random import shuffle
 
-#######
-#Cards (A-K)
-#0-12: Hearts
-#13-25: Clubs
-#26-38: Diamonds
-#39-51: Spades
-#52, 53: Red Joker, Black Joker
-#######
-def ls(l): return [len(s) for s in l]
+
+
+class DeckType(Enum):
+    STANDARD = 52
+    STANDARD_JOKERS = 54
+
+    def __init__(self, count):
+        self.count = count
 
 class Suit(Enum):
     HEARTS = (0, "Hearts", "H", "♥")
@@ -25,7 +24,6 @@ class Suit(Enum):
         self.symbol = symbol
 
 class Value(Enum):
-    JOKER = (99, "Joker", "JO", "$")
     ACE = (0, "Ace", "A", "A")
     TWO = (1, "Two", "2", "2")
     THREE = (2, "Three", "3", "3")
@@ -39,6 +37,7 @@ class Value(Enum):
     JACK = (10, "Jack", "J", "J")
     QUEEN = (11, "Queen", "Q", "Q")
     KING = (12, "King", "K", "K")
+    JOKER = (99, "Joker", "JO", "$")
 
     def __init__(self, idx, full, rep, code):
         self.idx = idx
@@ -55,20 +54,23 @@ class Color(Enum):
         self.rep = rep
 
 class Card:
-    minify = False
+    minify = True
 
-    suit_map = {s.idx:s for s in Suit}
-    for s in Suit: suit_map[s.code] = s
-
-    value_map = {v.idx:v for v in Value}
-    for v in Value: value_map[v.code] = v
-
+    suit_map = {
+        k:s
+        for s in Suit
+        for k in [s.idx, s.code]
+    }
+    value_map = {
+        k:v
+        for v in Value
+        for k in [v.idx, v.code]
+    }
     color_map = {c.rep:c for c in Color}
-
     group_map = {
         "#":{"type":"value", "set":{Value.TWO, Value.THREE, Value.FOUR, Value.FIVE, Value.SIX, Value.SEVEN, Value.EIGHT, Value.NINE,
-              Value.TEN}},
-        "F":{"type":"value", "set":{Value.JACK, Value.QUEEN, Value.KING}}
+              Value.TEN}}, #{v for v in Value if 0 < v.idx < 10}
+        "F":{"type":"value", "set":{Value.JACK, Value.QUEEN, Value.KING}} #{v for v in Value if 0 < v.idx < 10}
     }
 
     def __init__(self, idx):
@@ -77,6 +79,9 @@ class Card:
         self.suit = Card.suit_map[idx // 13] #52, 53 = Joker
         self.color = Color.RED if self.suit is Suit.DIAMONDS or self.suit is Suit.HEARTS or idx == 52 else Color.BLACK
 
+    def is_red(self):
+        return self.color == Color.RED
+
     def __repr__(self):
         if Card.minify:
             if self.value is not Value.JOKER: return f"{self.value.rep}{self.suit.symbol}"
@@ -84,33 +89,6 @@ class Card:
         else:
             if self.value is not Value.JOKER: return f"{self.value.full} of {self.suit.full}"
             else: return f"{self.color.full} {self.value.full}"
-
-
-    @staticmethod
-    def make_deck(decks=1, with_jokers=True, shuffled=True):
-        cards = [Card(i) for i in range(54 if with_jokers else 52)]*decks
-        if shuffled: shuffle(cards)
-        return cards
-
-    @staticmethod
-    def deal(d, amt=-1, players=1):
-        h = []
-        if amt < 0:
-            amount = len(d) // players
-        else:
-            amount = amt
-
-        for i in range(players):
-            h.append(d[amount * i:amount * (i + 1)])
-
-        if amt < 0:
-            # If a full deck deal, add the excess to each hand
-            for i in range(1, len(d) % amount+1):
-                h[i].append(d[-i])
-
-        d = d[sum([len(l) for l in h]):] #Deck is whatever is remaining
-
-        return d, h
 
 class ScoreSystem:
     class StandardScores:
@@ -142,8 +120,6 @@ class ScoreSystem:
                 elif feature in Card.suit_map: suit = Card.suit_map[feature]
                 elif feature in Card.color_map: color = Card.color_map[feature]
                 elif feature in Card.group_map: special = Card.group_map[feature]
-
-            # compares.append([lambda card: float(score) if ((not value or card.value == value) and (not suit or card.suit == suit) and (not color or card.color == color)) else None])
             compares.append({"score":float(score), "value":value, "suit":suit, "color":color, "special":special})
         return compares
 
@@ -168,6 +144,38 @@ class ScoreSystem:
                 print("No rules matched!")
         return score
 
-deck, hands = Card.deal(Card.make_deck(), players=4)
-s = ScoreSystem(ScoreSystem.StandardScores.HEARTS)
-print(s.score(hands[0]))
+class Dealer:
+    def __init__(self, deck_type=DeckType.STANDARD, decks=1, scoresystem=None):
+        self.deck_type = deck_type
+        self.scoresystem = scoresystem
+        self.deck = Dealer.make_deck(dt=deck_type, decks=decks)
+        pass
+
+    @staticmethod
+    def make_deck(dt=DeckType.STANDARD, decks=1, shuffled=True):
+        cards = [Card(i) for i in range(dt.count)] * decks
+        if shuffled: shuffle(cards)
+        return cards
+
+    @staticmethod
+    def deal(d, amt=-1, players=1):
+        h = []
+        if amt < 0:
+            amount = len(d) // players
+        else:
+            amount = amt
+
+        for i in range(players):
+            h.append(d[amount * i:amount * (i + 1)])
+
+        if amt < 0:
+            # If a full deck deal, add the excess to each hand
+            for i in range(1, len(d) % amount + 1):
+                h[i].append(d[-i])
+
+        d = d[sum([len(l) for l in h]):]  # Deck is whatever is remaining
+        return d, h
+
+
+
+
