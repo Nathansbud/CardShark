@@ -1,10 +1,18 @@
 import pygame
 from pygame.locals import *
+from enum import Enum
 
 from card import Card, DeckType, Suit, Value, ScoreSystem, Dealer
 
 pygame.init()
 screen = None
+
+class Orientation(Enum):
+    UP = 0
+    DOWN = 1
+    RIGHT = 2
+    LEFT = 3
+
 # noinspection PyShadowingNames
 class CardSprite:
     RED_COLOR = (255, 0, 0)
@@ -16,13 +24,17 @@ class CardSprite:
     font = pygame.font.SysFont("Arial Unicode MS", 24)
     screen = globals()['screen']
 
-    def __init__(self, card, size, color=CARD_COLOR, show=True, screen=screen, draw_border=True):
+
+    def __init__(self, card, size, color=CARD_COLOR, orientation=Orientation.UP, flipped=True, show=True, screen=screen, draw_border=True):
         self.card = card #this should be the Card object that it actually represents
         self._size = size
-        self.show = show
         self.screen = screen
         self.color = color
-        self.draw_border = True
+        self.draw_border = draw_border
+        self.orientation = orientation #up, down, right, left
+        self.flipped = flipped
+        self.show = show
+
 
     @property
     def size(self):
@@ -40,11 +52,13 @@ class CardSprite:
 
     def draw(self):
         if self.show:
-            pygame.draw.rect(screen, self.color, self._size)
+            if self.orientation == Orientation.UP or self.orientation == Orientation.DOWN: size = self._size
+            else: size = (self.x, self.y, self.height, self.width)
+            pygame.draw.rect(screen, self.color, size)
             if self.is_hovered():
-                pygame.draw.rect(screen, CardSprite.HOVER_COLOR, self._size, 1)
+                pygame.draw.rect(screen, CardSprite.HOVER_COLOR, size, 1)
             elif self.draw_border:
-                pygame.draw.rect(screen, CardSprite.BLACK_COLOR, self._size, 1)
+                pygame.draw.rect(screen, CardSprite.BLACK_COLOR, size, 1)
 
             screen.blit(
                 CardSprite.font.render(repr(self.card), self.x+self.width//4, CardSprite.RED_COLOR if self.card.is_red() else CardSprite.BLACK_COLOR),
@@ -52,9 +66,13 @@ class CardSprite:
             )
 
     def __repr__(self):
-        return f"Sprite: {self.card} @ {self._size}"
+        return f"Sprite: {self.card} @ {self._size} @ {self.orientation}"
 
-    def is_hovered(self): return self.x < pygame.mouse.get_pos()[0] < self.x + self.width and self.y < pygame.mouse.get_pos()[1] < self.y + self.height
+    def is_hovered(self):
+        if self.orientation == Orientation.UP or self.orientation == Orientation.DOWN:
+            return self.x < pygame.mouse.get_pos()[0] < self.x + self.width and self.y < pygame.mouse.get_pos()[1] < self.y + self.height
+        else:
+            return self.x < pygame.mouse.get_pos()[0] < self.x + self.height and self.y < pygame.mouse.get_pos()[1] < self.y + self.width
     @property
     def x(self): return self._size[0]
     @x.setter
